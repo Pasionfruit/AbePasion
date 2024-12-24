@@ -1,0 +1,28 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Home</title>
+</head>
+<body>
+    <a><h1>Welcome {{ username }}</h1></a>
+    <a href="Show_Entry_Result.html"><h1>Show my Contest Entry Results</h1></a>
+
+    {% if security > 2 %}
+        <a href="Add_Baking_Contest_User.html"><h1>Add new Baking Contest User</h1></a>
+    {% endif %}
+
+    <a href="Add_Baking_Contest_Entry.html"><h1>Add new Baking Contest Entry</h1></a>
+
+    {% if security > 1 %}
+        <a href="List_Baking_Contest_Users.html"><h1>List Baking Contest Users</h1></a>
+    {% endif %}
+
+    {% if security > 2 %}
+        <a href="Baking_Contest_Results.html"><h1>Baking Contest Entry Results</h1></a>
+    {% endif %}
+
+    <a href="/logout"><h1>Log out</h1></a> 
+</body>
+</html>
