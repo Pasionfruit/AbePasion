@@ -11,16 +11,7 @@ import {
 import AccessTimeIcon from '@mui/icons-material/AccessTime';
 import RestaurantIcon from '@mui/icons-material/Restaurant';
 import FavoriteIcon from '@mui/icons-material/Favorite';
-
-interface Recipe {
-  id: number;
-  title: string;
-  description: string;
-  image: string;
-  prepTime: string;
-  cookTime: string;
-  servings: number;
-}
+import { Recipe } from '../types/Recipe';
 
 interface RecipeCardProps {
   recipe: Recipe;
