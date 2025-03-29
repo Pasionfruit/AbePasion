@@ -51,7 +51,7 @@ const Navbar: React.FC = () => {
   );
 
   return (
-    <AppBar position="static" color="default" elevation={1}>
+    <AppBar position="static" color="primary" elevation={1}>
       <Toolbar>
         <Typography
           variant="h6"
@@ -60,7 +60,7 @@ const Navbar: React.FC = () => {
           sx={{
             flexGrow: 1,
             textDecoration: 'none',
-            color: 'inherit',
+            color: 'white',
             fontWeight: 'bold',
           }}
         >
@@ -83,7 +83,13 @@ const Navbar: React.FC = () => {
                 key={item.path}
                 component={Link}
                 to={item.path}
-                color={location.pathname === item.path ? 'primary' : 'inherit'}
+                color="inherit"
+                sx={{
+                  color: 'white',
+                  '&:hover': {
+                    backgroundColor: 'rgba(255, 255, 255, 0.1)',
+                  },
+                }}
               >
                 {item.label}
               </Button>
