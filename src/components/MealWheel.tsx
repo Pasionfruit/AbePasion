@@ -74,17 +74,46 @@ const MealWheel: React.FC<MealWheelProps> = ({ recipes }) => {
         >
           {recipes.map((recipe, index) => {
             const angle = (360 / recipes.length) * index;
+            const colors = [
+              '#2e7d32', // Dark green
+              '#4caf50', // Medium green
+              '#81c784', // Light green
+              '#a5d6a7', // Very light green
+              '#c8e6c9', // Lightest green
+            ];
+            const segmentAngle = 360 / recipes.length;
+            const radius = 50;
+            const startAngle = angle;
+            const endAngle = angle + segmentAngle;
+            
+            // Calculate points for the pie segment
+            const startRad = (startAngle * Math.PI) / 180;
+            const endRad = (endAngle * Math.PI) / 180;
+            const x1 = 50 + radius * Math.sin(startRad);
+            const y1 = 50 - radius * Math.cos(startRad);
+            const x2 = 50 + radius * Math.sin(endRad);
+            const y2 = 50 - radius * Math.cos(endRad);
+            
+            // Determine if the arc is large (more than 180 degrees)
+            const largeArc = segmentAngle > 180 ? 1 : 0;
+            
+            const clipPathPoints = [
+              '50% 50%', // Center point
+              `${x1}% ${y1}%`, // Start point
+              `${x2}% ${y2}%`, // End point
+            ].join(', ');
+            
             return (
               <Box
                 key={recipe.id}
                 sx={{
                   position: 'absolute',
-                  width: '50%',
-                  height: '50%',
-                  left: '25%',
-                  top: '0%',
-                  transformOrigin: 'bottom center',
+                  width: '100%',
+                  height: '100%',
                   transform: `rotate(${angle}deg)`,
+                  transformOrigin: '50% 50%',
+                  clipPath: `polygon(${clipPathPoints})`,
+                  backgroundColor: colors[index % colors.length],
                 }}
               >
                 <Box
@@ -92,50 +121,39 @@ const MealWheel: React.FC<MealWheelProps> = ({ recipes }) => {
                     position: 'absolute',
                     width: '100%',
                     textAlign: 'center',
-                    transform: `rotate(${90 + angle/2}deg)`,
+                    transform: `rotate(${-angle + 90}deg)`,
                     transformOrigin: 'center center',
                     color: 'white',
                     display: 'flex',
                     alignItems: 'center',
                     justifyContent: 'center',
                     height: '100%',
+                    padding: '20px',
                   }}
                 >
                   <Typography
                     sx={{
-                      fontSize: '14px',
+                      fontSize: '16px',
                       fontWeight: 'bold',
-                      textShadow: '1px 1px 2px rgba(0,0,0,0.5)',
-                      maxWidth: '150px',
+                      textShadow: '2px 2px 4px rgba(0,0,0,0.8)',
+                      maxWidth: '120px',
                       overflow: 'hidden',
                       textOverflow: 'ellipsis',
                       whiteSpace: 'nowrap',
-                      transform: 'translateY(-50%)',
+                      color: '#ffffff',
+                      padding: '8px 12px',
+                      backgroundColor: 'rgba(0,0,0,0.7)',
+                      borderRadius: '4px',
+                      position: 'absolute',
+                      top: '35%',
+                      left: '50%',
+                      transform: 'translateX(-50%)',
                     }}
                   >
                     {recipe.title}
                   </Typography>
                 </Box>
               </Box>
-            );
-          })}
-
-          {/* Wheel segments */}
-          {recipes.map((_, index) => {
-            const angle = (360 / recipes.length) * index;
-            return (
-              <Box
-                key={index}
-                sx={{
-                  position: 'absolute',
-                  width: '100%',
-                  height: '100%',
-                  transform: `rotate(${angle}deg)`,
-                  transformOrigin: '50% 50%',
-                  clipPath: 'polygon(50% 50%, 50% 0, 100% 0, 100% 100%, 50% 100%)',
-                  backgroundColor: index % 2 ? '#4caf50' : '#81c784',
-                }}
-              />
             );
           })}
         </Box>
