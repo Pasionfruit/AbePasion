@@ -10,10 +10,10 @@ const MealWheel: React.FC<MealWheelProps> = ({ recipes }) => {
   const [rotation, setRotation] = useState(0);
   const [isSpinning, setIsSpinning] = useState(false);
   const [selectedRecipe, setSelectedRecipe] = useState<Recipe | null>(null);
+  const [clickCount, setClickCount] = useState(0);
 
   const spinWheel = () => {
-    if (isSpinning) return;
-    
+    setClickCount(prev => prev + 1);
     setIsSpinning(true);
     setSelectedRecipe(null);
     
@@ -92,10 +92,13 @@ const MealWheel: React.FC<MealWheelProps> = ({ recipes }) => {
                     position: 'absolute',
                     width: '100%',
                     textAlign: 'center',
-                    transform: 'rotate(90deg)',
-                    transformOrigin: 'left bottom',
-                    paddingLeft: '20px',
+                    transform: `rotate(${90 + angle/2}deg)`,
+                    transformOrigin: 'center center',
                     color: 'white',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    height: '100%',
                   }}
                 >
                   <Typography
@@ -107,6 +110,7 @@ const MealWheel: React.FC<MealWheelProps> = ({ recipes }) => {
                       overflow: 'hidden',
                       textOverflow: 'ellipsis',
                       whiteSpace: 'nowrap',
+                      transform: 'translateY(-50%)',
                     }}
                   >
                     {recipe.title}
@@ -141,8 +145,10 @@ const MealWheel: React.FC<MealWheelProps> = ({ recipes }) => {
         variant="contained"
         color="primary"
         onClick={spinWheel}
-        disabled={isSpinning}
-        sx={{ mt: 3, mb: 2 }}
+        sx={{ 
+          mt: 3, 
+          mb: 2,
+        }}
       >
         Spin for a Recipe!
       </Button>
