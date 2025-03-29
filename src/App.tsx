@@ -1,12 +1,11 @@
 import React from 'react';
 import { ThemeProvider, createTheme } from '@mui/material/styles';
 import CssBaseline from '@mui/material/CssBaseline';
-import { Container, Grid, Typography, Box } from '@mui/material';
+import { Container, Typography, Box } from '@mui/material';
 import { BrowserRouter as Router, Route, Routes, Navigate } from 'react-router-dom';
-import RecipeCard from './components/RecipeCard';
 import MealWheel from './components/MealWheel';
 import Navbar from './components/Navbar';
-import { recipeDB } from './data/recipes';
+import RecipePage from './components/RecipePage';
 
 const theme = createTheme({
   palette: {
@@ -20,20 +19,7 @@ const theme = createTheme({
   },
 });
 
-const meals = [
-  'Pizza',
-  'Burger',
-  'Sushi',
-  'Pasta',
-  'Salad',
-  'Tacos',
-  'Curry',
-  'Steak'
-];
-
 function App() {
-  const recipes = recipeDB.getAllRecipes();
-  
   return (
     <Router>
       <ThemeProvider theme={theme}>
@@ -43,33 +29,7 @@ function App() {
           <Container maxWidth="lg">
             <Routes>
               <Route path="/" element={<Navigate to="/recipes" replace />} />
-              <Route
-                path="/recipes"
-                element={
-                  <>
-                    <Typography
-                      variant="h2"
-                      component="h1"
-                      gutterBottom
-                      sx={{
-                        textAlign: 'center',
-                        color: 'primary.main',
-                        fontWeight: 'bold',
-                        mb: 4,
-                      }}
-                    >
-                      Recipe Book
-                    </Typography>
-                    <Grid container spacing={3}>
-                      {recipes.map((recipe) => (
-                        <Grid item xs={12} sm={6} md={4} key={recipe.id}>
-                          <RecipeCard recipe={recipe} />
-                        </Grid>
-                      ))}
-                    </Grid>
-                  </>
-                }
-              />
+              <Route path="/recipes" element={<RecipePage />} />
               <Route
                 path="/wheel"
                 element={
@@ -87,7 +47,7 @@ function App() {
                     >
                       Meal Wheel
                     </Typography>
-                    <MealWheel recipes={recipes} />
+                    <MealWheel recipes={[]} />
                   </>
                 }
               />
