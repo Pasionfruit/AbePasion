@@ -51,11 +51,10 @@ const Portfolio: React.FC = () => {
       </div>
 
       {/* Hero Section */}
-      <section id="hero" className="d-flex flex-column justify-content-center align-items-center">
-        <div className="hero-container" data-aos="fade-in">
-          <h1>Hello World!</h1>
-          <h1>I'm Abe Pasion</h1>
-          <p>I'm <span className="typed" data-typed-items="a Software Engineer, a Problem Solver, an Adventurer, a Cat Dad, a Seminole"></span></p>
+      <section id="hero" style={{ backgroundImage: `url(${process.env.PUBLIC_URL}/assets/img/hero-bg.jpg)` }}>
+        <div className="hero-container">
+          <h1>Abe Pasion</h1>
+          <p>Software Engineer</p>
         </div>
       </section>
 
