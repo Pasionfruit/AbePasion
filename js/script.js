@@ -32,6 +32,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
         return `
             <div class="event-card">
+                <button class="delete-event-btn" data-event-id="${event.id}">❌ Delete</button>
                 <h3>${event.title}</h3>
                 <p><strong>Time:</strong> ${event.time}</p>
                 <p><strong>Location:</strong> ${event.location}</p>
@@ -55,6 +56,28 @@ document.addEventListener('DOMContentLoaded', () => {
         `;
     };
 
+    // --- NEW FUNCTION: Attach Delete Listeners ---
+    const attachDeleteListeners = () => {
+        document.querySelectorAll('.delete-event-btn').forEach(button => {
+            button.onclick = function() {
+                const eventIdToDelete = this.getAttribute('data-event-id');
+                
+                // Confirmation Step
+                if (!confirm("Are you sure you want to delete this event? This action cannot be undone.")) {
+                    return; // Stop if the user clicks Cancel
+                }
+
+                // Loop through all days to find and delete the event
+                for (const day in eventsByDay) {
+                    eventsByDay[day] = eventsByDay[day].filter(event => event.id !== eventIdToDelete);
+                }
+
+                // After deletion, re-render the list to update the view
+                renderAllEvents();
+            };
+        });
+    };
+
     // Main function to render ALL events grouped by day
     const renderAllEvents = () => {
         eventsListContainer.innerHTML = '';
@@ -75,6 +98,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
         // Re-attach poll listeners after new HTML is injected
         attachPollListeners();
+        attachDeleteListeners();
     };
 
     // Function to initialize or add a new event to the data structure
@@ -172,23 +196,7 @@ document.addEventListener('DOMContentLoaded', () => {
     // 3. Populate initial (hardcoded) events
     const initialEvents = [
         // Hardcoded Event 1 (Dec 14)
-        { id: 'e001', day: 'Dec 14 (Sea)', title: 'Captain\'s Welcome Aboard Show', time: '7:30 PM - 8:30 PM (1 hr)', location: 'Theater (Decks 2 & 3)', votes: { yes: ["Ciara", "Chris", "Evan"], no: ["Abe", "Bryce", "Allen", "Koda"] } },
-        // Hardcoded Event 2 (Dec 14)
-        { id: 'e002', day: 'Dec 14 (Sea)', title: 'Late-Night DJ Set', time: '11:00 PM - 1:00 AM (2 hr)', location: 'The Crypt Nightclub', votes: { yes: ["Abe", "Chris", "Koda"], no: ["Ciara", "Bryce", "Evan", "Allen"] } },
-        
-        // --- NEW DUMMY EVENT (e009) ---
-        { 
-            id: 'e009', 
-            day: 'Dec 15 (Port 1)', 
-            title: 'Group Dinner Reservation at Chops', 
-            time: '7:00 PM', 
-            location: 'Chops Grille (Deck 11)', 
-            votes: { 
-                // Simulating a consensus vote: Abe, Ciara, Chris, and Bryce are going.
-                yes: ["Abe", "Ciara", "Chris", "Bryce"], 
-                no: ["Evan", "Allen", "Koda"] 
-            } 
-        },
+        { id: 'e001', day: 'Dec 14 (Sea)', title: 'TESST', time: '7:30 PM - 8:30 PM (1 hr)', location: 'Theater (Decks 2 & 3)', votes: { yes: ["Ciara", "Chris", "Evan"], no: ["Abe", "Bryce", "Allen", "Koda"] } },
         // -------------------------------
     ];
     initialEvents.forEach(addEventToData);

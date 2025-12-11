@@ -315,3 +315,22 @@ h2 {
     border-bottom: 2px solid #ddd;
     padding-bottom: 5px;
 }
+
+/* --- Delete Button Styling --- */
+.delete-event-btn {
+    float: right; /* Positions the button to the top right of the card */
+    background: none;
+    border: 1px solid #ccc;
+    color: #cc0000; /* Red color for warning */
+    padding: 3px 8px;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 0.8em;
+    font-weight: bold;
+    margin-top: -5px; /* Pulls it up slightly */
+    transition: background-color 0.2s;
+}
+
+.delete-event-btn:hover {
+    background-color: #ffe6e6;
+}
