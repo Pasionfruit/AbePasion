@@ -324,15 +324,13 @@ document.addEventListener('DOMContentLoaded', () => {
     // 5. Initial Data Population (Manual one-time push)
     // IMPORTANT: Run this once manually if your 'events' collection is empty.
     // If you already have events in the DB, DELETE this section.
-    const initialEvents = [
-        { day: 'Dec 14 (Sea)', title: 'Captain\'s Welcome Aboard Show', time: '7:30 PM - 8:30 PM (1 hr)', location: 'Theater (Decks 2 & 3)', votes: { yes: ["Ciara", "Chris", "Evan"], no: ["Abe", "Bryce", "Allen", "Koda"] } },
-        { day: 'Dec 14 (Sea)', title: 'Late-Night DJ Set', time: '11:00 PM - 1:00 AM (2 hr)', location: 'The Crypt Nightclub', votes: { yes: ["Abe", "Chris", "Koda"], no: ["Ciara", "Bryce", "Evan", "Allen"] } },
-        { day: 'Dec 15 (Port 1)', title: 'Group Dinner Reservation at Chops', time: '7:00 PM', location: 'Chops Grille (Deck 11)', votes: { yes: ["Abe", "Ciara", "Chris", "Bryce"], no: ["Evan", "Allen", "Koda"] } },
-    ];
-    // UNCOMMENT AND RUN THIS CODE ONCE IF YOUR DB IS EMPTY:
-    /*
-    initialEvents.forEach(event => {
-        db.collection('events').add(event);
-    });
-    */
+    // const initialEvents = [
+    //     { day: 'Dec 14 (Sea)', title: 'Captain\'s Welcome Aboard Show', time: '7:30 PM - 8:30 PM (1 hr)', location: 'Theater (Decks 2 & 3)', votes: { yes: ["Ciara", "Chris", "Evan"], no: ["Abe", "Bryce", "Allen", "Koda"] } },
+    //     { day: 'Dec 14 (Sea)', title: 'Late-Night DJ Set', time: '11:00 PM - 1:00 AM (2 hr)', location: 'The Crypt Nightclub', votes: { yes: ["Abe", "Chris", "Koda"], no: ["Ciara", "Bryce", "Evan", "Allen"] } },
+    //     { day: 'Dec 15 (Port 1)', title: 'Group Dinner Reservation at Chops', time: '7:00 PM', location: 'Chops Grille (Deck 11)', votes: { yes: ["Abe", "Ciara", "Chris", "Bryce"], no: ["Evan", "Allen", "Koda"] } },
+    // ];
+    // // UNCOMMENT AND RUN THIS CODE ONCE IF YOUR DB IS EMPTY:
+    // initialEvents.forEach(event => {
+    //     db.collection('events').add(event);
+    // });
 });
