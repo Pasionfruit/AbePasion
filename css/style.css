@@ -334,3 +334,80 @@ h2 {
 .delete-event-btn:hover {
     background-color: #ffe6e6;
 }
+
+.poll-btn:hover:not(.selected) {
+    /* Lighter background when hovering, but not already selected */
+    background-color: #f0f0f0; 
+}
+
+.filter-bar {
+    display: flex;
+    gap: 10px;
+    margin-bottom: 20px;
+}
+.filter-btn {
+    padding: 8px 12px;
+    border: 1px solid var(--primary-color);
+    border-radius: 20px; /* Pill shape */
+    background-color: white;
+    color: var(--primary-color);
+    cursor: pointer;
+    font-weight: bold;
+    transition: background-color 0.2s, color 0.2s;
+}
+.filter-btn.active,
+.filter-btn:hover {
+    background-color: var(--primary-color);
+    color: white;
+}
+/* --- Visual cue for expandable content --- */
+.event-card {
+    /* Existing styles remain */
+    cursor: pointer; /* Indicates the card is clickable */
+}
+
+/* Ensure buttons still have the default pointer */
+.poll-btn, .delete-event-btn {
+    cursor: pointer;
+}
+/* --- View Votes Button Styling --- */
+.view-votes-btn {
+    float: right; 
+    clear: right; /* Forces it below the delete button */
+    background-color: #f0f0f0; 
+    border: 1px solid #ccc;
+    color: var(--primary-color);
+    padding: 3px 8px;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 0.8em;
+    font-weight: bold;
+    margin-top: 5px; /* Space it down from the delete button */
+    transition: background-color 0.2s;
+}
+
+.view-votes-btn:hover {
+    background-color: #e0e0e0;
+}
+/* --- Collapse Button Styling --- */
+.day-header {
+    display: flex; /* Allows button alignment */
+    justify-content: space-between;
+    align-items: center;
+    /* Existing styles remain */
+}
+
+.collapse-btn {
+    background: none;
+    border: none;
+    color: var(--secondary-color);
+    font-size: 1.2em;
+    cursor: pointer;
+    padding: 5px;
+    margin-left: 10px;
+    transition: color 0.2s;
+}
+
+.collapse-btn:hover {
+    color: var(--primary-color);
+}

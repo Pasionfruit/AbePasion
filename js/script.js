@@ -33,6 +33,7 @@ document.addEventListener('DOMContentLoaded', () => {
         return `
             <div class="event-card">
                 <button class="delete-event-btn" data-event-id="${event.id}">❌ Delete</button>
+                <button class="view-votes-btn" data-event-id="${event.id}">View Other Votes</button>
                 <h3>${event.title}</h3>
                 <p><strong>Time:</strong> ${event.time}</p>
                 <p><strong>Location:</strong> ${event.location}</p>
@@ -47,13 +48,34 @@ document.addEventListener('DOMContentLoaded', () => {
                             ❌ No (<span class="count-no">${event.votes.no.length}</span>)
                         </button>
                     </div>
-                    <div class="poll-results" style="display: none;">
+                    <div class="poll-results hidden" data-visible="false" style="display: none;">
                         <p class="yes-attendees"><strong>Attending (${event.votes.yes.length}):</strong> ${event.votes.yes.sort().join(', ')}</p>
                         <p class="no-attendees"><strong>Not Attending (${event.votes.no.length}):</strong> ${event.votes.no.sort().join(', ')}</p>
                     </div>
                 </div>
             </div>
         `;
+    };
+
+    // --- NEW FUNCTION: Attach View Votes Listeners ---
+    const attachViewVotesListeners = () => {
+        document.querySelectorAll('.view-votes-btn').forEach(button => {
+            button.onclick = function() {
+                const card = this.closest('.event-card');
+                const results = card.querySelector('.poll-results');
+                const isHidden = results.getAttribute('data-visible') === 'false';
+                
+                if (isHidden) {
+                    results.style.display = 'block';
+                    results.setAttribute('data-visible', 'true');
+                    this.textContent = 'Hide Other Votes';
+                } else {
+                    results.style.display = 'none';
+                    results.setAttribute('data-visible', 'false');
+                    this.textContent = 'View Other Votes';
+                }
+            };
+        });
     };
 
     // --- NEW FUNCTION: Attach Delete Listeners ---
@@ -78,6 +100,34 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     };
 
+    // --- NEW FUNCTION: Attach Collapse Listeners ---
+    const attachCollapseListeners = () => {
+        document.querySelectorAll('.collapse-btn').forEach(button => {
+            button.onclick = function() {
+                const dayToToggle = this.getAttribute('data-day');
+                const currentState = this.getAttribute('data-state');
+                
+                // Select all event wrappers for that specific day
+                const eventWrappers = document.querySelectorAll(`.event-day-${dayToToggle.replace(/[^a-zA-Z0-9]/g, '-')}`);
+                
+                if (currentState === 'expanded') {
+                    // Collapse the section
+                    eventWrappers.forEach(wrapper => {
+                        wrapper.style.display = 'none';
+                    });
+                    this.setAttribute('data-state', 'collapsed');
+                    this.innerHTML = '<i class="fas fa-chevron-down"></i>';
+                } else {
+                    // Expand the section
+                    eventWrappers.forEach(wrapper => {
+                        wrapper.style.display = 'block';
+                    });
+                    this.setAttribute('data-state', 'expanded');
+                    this.innerHTML = '<i class="fas fa-chevron-up"></i>';
+                }
+            };
+        });
+    };
     // Main function to render ALL events grouped by day
     const renderAllEvents = () => {
         eventsListContainer.innerHTML = '';
@@ -85,20 +135,35 @@ document.addEventListener('DOMContentLoaded', () => {
 
         sortedDays.forEach(day => {
             if (eventsByDay[day].length > 0) {
-                eventsListContainer.innerHTML += `<div class="day-header">${day}</div>`;
+                // Add Day Header with a Collapse Button
+                eventsListContainer.innerHTML += `
+                    <div class="day-header" data-day="${day}">
+                        ${day}
+                        <button class="collapse-btn" data-day="${day}" data-state="expanded">
+                            <i class="fas fa-chevron-up"></i>
+                        </button>
+                    </div>
+                `;
                 
                 // Sort events by time (simplistic sort based on time string)
                 eventsByDay[day].sort((a, b) => a.time.localeCompare(b.time));
                 
                 eventsByDay[day].forEach(event => {
-                    eventsListContainer.innerHTML += createEventCardHTML(event);
+                    // Add an event-card-wrapper around the event card to target for collapse
+                    eventsListContainer.innerHTML += `
+                        <div class="event-card-wrapper event-day-${day.replace(/[^a-zA-Z0-9]/g, '-')}" data-day="${day}">
+                            ${createEventCardHTML(event)}
+                        </div>
+                    `;
                 });
             }
         });
 
-        // Re-attach poll listeners after new HTML is injected
+        // Re-attach listeners after new HTML is injected
         attachPollListeners();
         attachDeleteListeners();
+        attachViewVotesListeners();
+        attachCollapseListeners(); // <--- NEW LINE ADDED HERE
     };
 
     // Function to initialize or add a new event to the data structure
@@ -110,7 +175,6 @@ document.addEventListener('DOMContentLoaded', () => {
     };
     
     // --- Poll Handlers ---
-
     // Function to attach click handlers to the poll buttons
     const attachPollListeners = () => {
         document.querySelectorAll('.poll-btn').forEach(button => {
@@ -147,21 +211,9 @@ document.addEventListener('DOMContentLoaded', () => {
                 renderAllEvents();
             };
         });
-        
-        // Listener for toggling poll results visibility
-        document.querySelectorAll('.group-poll').forEach(poll => {
-             poll.onclick = function(e) {
-                if (e.target.classList.contains('poll-btn') || e.target.classList.contains('poll-prompt')) {
-                    const results = poll.querySelector('.poll-results');
-                    results.style.display = results.style.display === 'none' ? 'block' : 'none';
-                }
-            };
-        });
     };
 
-
     // --- Initialization & Setup ---
-    
     // 1. Set up the Tab Switching
     tabLinks.forEach(link => {
         link.addEventListener('click', () => {
@@ -193,11 +245,92 @@ document.addEventListener('DOMContentLoaded', () => {
     });
     
     // 3. Populate initial (hardcoded) events
-    // 3. Populate initial (hardcoded) events
     const initialEvents = [
         // Hardcoded Event 1 (Dec 14)
-        { id: 'e001', day: 'Dec 14 (Sea)', title: 'TESST', time: '7:30 PM - 8:30 PM (1 hr)', location: 'Theater (Decks 2 & 3)', votes: { yes: ["Ciara", "Chris", "Evan"], no: ["Abe", "Bryce", "Allen", "Koda"] } },
-        // -------------------------------
+        { 
+            id: 'e001', 
+            day: 'Dec 14 (Sea)', 
+            title: 'Captain\'s Welcome Aboard Show', 
+            time: '7:30 PM - 8:30 PM (1 hr)', 
+            location: 'Theater (Decks 2 & 3)', 
+            votes: { 
+                yes: ["Ciara", "Chris", "Evan"], 
+                no: ["Abe", "Bryce", "Allen", "Koda"] 
+            } 
+        },
+        // Hardcoded Event 2 (Dec 14)
+        { 
+            id: 'e002', 
+            day: 'Dec 14 (Sea)', 
+            title: 'Late-Night DJ Set', 
+            time: '11:00 PM - 1:00 AM (2 hr)', 
+            location: 'The Crypt Nightclub', 
+            votes: { 
+                yes: ["Abe", "Chris", "Koda"], 
+                no: ["Ciara", "Bryce", "Evan", "Allen"] 
+            } 
+        },
+        // Dummy Event (Dec 15)
+        { 
+            id: 'e009', 
+            day: 'Dec 15 (Port 1)', 
+            title: 'Group Dinner Reservation at Chops', 
+            time: '7:00 PM', 
+            location: 'Chops Grille (Deck 11)', 
+            votes: { 
+                yes: ["Abe", "Ciara", "Chris", "Bryce"], 
+                no: ["Evan", "Allen", "Koda"] 
+            } 
+        },
+        // --- Original Events from User Input (e003 - e008) ---
+        { 
+            id: 'e003', 
+            day: 'Dec 14 (Sea)', 
+            title: 'Guess the Weight of the Sculpture', 
+            time: '10:40 AM - 3:10 PM', 
+            location: 'Deck 5', 
+            votes: { yes: [], no: [] } 
+        },
+        { 
+            id: 'e004', 
+            day: 'Dec 14 (Sea)', 
+            title: 'Caribbean Tunes with Tropical Band', 
+            time: '11:15 AM - 12:00 PM', 
+            location: 'Deck 11', 
+            votes: { yes: [], no: [] } 
+        },
+        { 
+            id: 'e005', 
+            day: 'Dec 14 (Sea)', 
+            title: 'Complimentary Facial Demonstration', 
+            time: '12:00 PM - 4:00 PM', 
+            location: 'Deck 12', 
+            votes: { yes: [], no: [] } 
+        },
+        { 
+            id: 'e006', 
+            day: 'Dec 14 (Sea)', 
+            title: 'Complimentary Massage Demonstration', 
+            time: '12:00 PM - 4:30 PM', 
+            location: 'Deck 12', 
+            votes: { yes: [], no: [] } 
+        },
+        { 
+            id: 'e007', 
+            day: 'Dec 14 (Sea)', 
+            title: 'Pain Management with Acupuncture', 
+            time: '12:00 PM - 5:00 PM', 
+            location: 'Deck 4', 
+            votes: { yes: [], no: [] } 
+        },
+        { 
+            id: 'e008', 
+            day: 'Dec 14 (Sea)', 
+            title: 'Port & Shopping Expert Available', 
+            time: '12:00 PM - 2:00 PM', 
+            location: 'Deck 4', 
+            votes: { yes: [], no: [] } 
+        },
     ];
     initialEvents.forEach(addEventToData);
     
