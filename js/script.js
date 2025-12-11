@@ -1,11 +1,17 @@
 document.addEventListener('DOMContentLoaded', () => {
+    // Check if Firebase is available (initialized in index.html)
+    if (typeof firebase === 'undefined' || typeof db === 'undefined') {
+        console.error("Firebase is not initialized. Check your index.html script tags.");
+        return;
+    }
+
     // --- Configuration ---
     const USERS = ["Abe", "Ciara", "Chris", "Bryce", "Evan", "Allen", "Koda"];
-    let CURRENT_USER = USERS[0]; // Default user, tracked via dropdown
-    let eventIdCounter = 100; // Counter for unique IDs (starting high to avoid conflict with e001-e008)
+    let CURRENT_USER = USERS[0]; 
+    let eventIdCounter = 100; // Still used for unique ID generation, though Firestore generates its own ID
     
-    // Structure: { 'Dec 14': [{event object}, {event object}], ... }
-    let eventsByDay = {}; 
+    // The events data will now be stored in this array, populated by Firestore
+    let LIVE_EVENTS = []; 
     
     // --- DOM Elements ---
     const tabLinks = document.querySelectorAll('.tabs-nav .tab-link');
@@ -18,13 +24,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // --- Utility Functions ---
 
-    // Function to generate unique event ID
-    const getNextEventId = () => {
-        eventIdCounter++;
-        return `e${eventIdCounter}`;
-    };
-
-    // Function to create the HTML string for an event card
+    // Function to create the HTML string for an event card (No change needed here)
     const createEventCardHTML = (event) => {
         // Find the current user's vote status for styling
         const isYes = event.votes.yes.includes(CURRENT_USER) ? ' selected' : '';
@@ -57,80 +57,19 @@ document.addEventListener('DOMContentLoaded', () => {
         `;
     };
 
-    // --- NEW FUNCTION: Attach View Votes Listeners ---
-    const attachViewVotesListeners = () => {
-        document.querySelectorAll('.view-votes-btn').forEach(button => {
-            button.onclick = function() {
-                const card = this.closest('.event-card');
-                const results = card.querySelector('.poll-results');
-                const isHidden = results.getAttribute('data-visible') === 'false';
-                
-                if (isHidden) {
-                    results.style.display = 'block';
-                    results.setAttribute('data-visible', 'true');
-                    this.textContent = 'Hide Other Votes';
-                } else {
-                    results.style.display = 'none';
-                    results.setAttribute('data-visible', 'false');
-                    this.textContent = 'View Other Votes';
-                }
-            };
-        });
-    };
+    // --- DATABASE INTERACTION FUNCTIONS ---
 
-    // --- NEW FUNCTION: Attach Delete Listeners ---
-    const attachDeleteListeners = () => {
-        document.querySelectorAll('.delete-event-btn').forEach(button => {
-            button.onclick = function() {
-                const eventIdToDelete = this.getAttribute('data-event-id');
-                
-                // Confirmation Step
-                if (!confirm("Are you sure you want to delete this event? This action cannot be undone.")) {
-                    return; // Stop if the user clicks Cancel
-                }
-
-                // Loop through all days to find and delete the event
-                for (const day in eventsByDay) {
-                    eventsByDay[day] = eventsByDay[day].filter(event => event.id !== eventIdToDelete);
-                }
-
-                // After deletion, re-render the list to update the view
-                renderAllEvents();
-            };
-        });
-    };
-
-    // --- NEW FUNCTION: Attach Collapse Listeners ---
-    const attachCollapseListeners = () => {
-        document.querySelectorAll('.collapse-btn').forEach(button => {
-            button.onclick = function() {
-                const dayToToggle = this.getAttribute('data-day');
-                const currentState = this.getAttribute('data-state');
-                
-                // Select all event wrappers for that specific day
-                const eventWrappers = document.querySelectorAll(`.event-day-${dayToToggle.replace(/[^a-zA-Z0-9]/g, '-')}`);
-                
-                if (currentState === 'expanded') {
-                    // Collapse the section
-                    eventWrappers.forEach(wrapper => {
-                        wrapper.style.display = 'none';
-                    });
-                    this.setAttribute('data-state', 'collapsed');
-                    this.innerHTML = '<i class="fas fa-chevron-down"></i>';
-                } else {
-                    // Expand the section
-                    eventWrappers.forEach(wrapper => {
-                        wrapper.style.display = 'block';
-                    });
-                    this.setAttribute('data-state', 'expanded');
-                    this.innerHTML = '<i class="fas fa-chevron-up"></i>';
-                }
-            };
-        });
-    };
-    // Main function to render ALL events grouped by day
+    // New: Renders events based on the LIVE_EVENTS array
     const renderAllEvents = () => {
         eventsListContainer.innerHTML = '';
+        
+        // Group and sort the live data
+        const eventsByDay = LIVE_EVENTS.reduce((acc, event) => {
+            if (!acc[event.day]) acc[event.day] = [];
+            acc[event.day].push(event);
+            return acc;
+        }, {});
+
         const sortedDays = Object.keys(eventsByDay).sort();
 
         sortedDays.forEach(day => {
@@ -159,23 +98,76 @@ document.addEventListener('DOMContentLoaded', () => {
             }
         });
 
-        // Re-attach listeners after new HTML is injected
+        // Re-attach all listeners after new HTML is injected
         attachPollListeners();
         attachDeleteListeners();
         attachViewVotesListeners();
-        attachCollapseListeners(); // <--- NEW LINE ADDED HERE
+        attachCollapseListeners();
     };
 
-    // Function to initialize or add a new event to the data structure
-    const addEventToData = (eventData) => {
-        if (!eventsByDay[eventData.day]) {
-            eventsByDay[eventData.day] = [];
+    // NEW: Handles vote updates and writes to Firestore
+    const handleVoteUpdate = async (eventObj, voteType, oppositeType) => {
+        const docRef = db.collection('events').doc(eventObj.id);
+        
+        // Prepare the updated vote arrays (using Firestore array update commands)
+        const updateData = {};
+
+        // 1. Remove user from the opposite category
+        updateData[`votes.${oppositeType}`] = firebase.firestore.FieldValue.arrayRemove(CURRENT_USER);
+        
+        // 2. Add user to the current category (Firestore handles checking if user is already there)
+        updateData[`votes.${voteType}`] = firebase.firestore.FieldValue.arrayUnion(CURRENT_USER);
+
+        try {
+            await docRef.update(updateData);
+            // Re-rendering is handled automatically by the Firestore listener (see Initialization)
+        } catch (error) {
+            console.error("Error updating vote:", error);
         }
-        eventsByDay[eventData.day].push(eventData);
+    };
+
+    // NEW: Deletes an event document from Firestore
+    const deleteEventFromDB = async (eventIdToDelete) => {
+        try {
+            await db.collection('events').doc(eventIdToDelete).delete();
+            // Re-rendering is handled automatically by the Firestore listener
+        } catch (error) {
+            console.error("Error deleting event:", error);
+            alert("Failed to delete event. Check console for details.");
+        }
     };
     
-    // --- Poll Handlers ---
-    // Function to attach click handlers to the poll buttons
+    // NEW: Adds a new event document to Firestore
+    const addNewEventToDB = async (newEventData) => {
+        try {
+            // Firestore generates a unique ID automatically
+            await db.collection('events').add(newEventData);
+            
+            // Re-rendering is handled automatically by the Firestore listener
+        } catch (error) {
+            console.error("Error adding new event:", error);
+            alert("Failed to add new event. Check console for details.");
+        }
+    };
+
+
+    // --- ATTACH LISTENERS (UPDATED TO USE DB FUNCTIONS) ---
+    
+    const attachDeleteListeners = () => {
+        document.querySelectorAll('.delete-event-btn').forEach(button => {
+            button.onclick = function() {
+                const eventIdToDelete = this.getAttribute('data-event-id');
+                
+                if (!confirm("Are you sure you want to delete this event? This action cannot be undone.")) {
+                    return;
+                }
+                
+                // Use the new DB function
+                deleteEventFromDB(eventIdToDelete);
+            };
+        });
+    };
+    
     const attachPollListeners = () => {
         document.querySelectorAll('.poll-btn').forEach(button => {
             button.onclick = function() {
@@ -186,35 +178,68 @@ document.addEventListener('DOMContentLoaded', () => {
                 
                 const pollElement = this.closest('.group-poll');
                 const eventId = pollElement.getAttribute('data-event-id');
-                const voteType = this.getAttribute('data-vote'); // 'yes' or 'no'
+                const voteType = this.getAttribute('data-vote');
                 const oppositeType = (voteType === 'yes' ? 'no' : 'yes');
 
-                // Find the event object in the data structure
-                let eventObj;
-                Object.values(eventsByDay).flat().forEach(e => {
-                    if (e.id === eventId) {
-                        eventObj = e;
-                    }
-                });
+                // Find the event object in the LIVE_EVENTS array
+                const eventObj = LIVE_EVENTS.find(e => e.id === eventId);
 
                 if (eventObj) {
-                    // 1. Remove user from the opposite category
-                    eventObj.votes[oppositeType] = eventObj.votes[oppositeType].filter(name => name !== CURRENT_USER);
-                    
-                    // 2. Add user to the current category (only if not already there)
-                    if (!eventObj.votes[voteType].includes(CURRENT_USER)) {
-                        eventObj.votes[voteType].push(CURRENT_USER);
-                    }
+                    // Use the new DB function to update the vote
+                    handleVoteUpdate(eventObj, voteType, oppositeType);
                 }
-
-                // Re-render all to update the counts and highlights
-                renderAllEvents();
+            };
+        });
+        
+        // Attach View Votes Listener to the new button
+        document.querySelectorAll('.view-votes-btn').forEach(button => {
+            button.onclick = function() {
+                const card = this.closest('.event-card');
+                const results = card.querySelector('.poll-results');
+                const isHidden = results.getAttribute('data-visible') === 'false';
+                
+                if (isHidden) {
+                    results.style.display = 'block';
+                    results.setAttribute('data-visible', 'true');
+                    this.textContent = 'Hide Other Votes';
+                } else {
+                    results.style.display = 'none';
+                    results.setAttribute('data-visible', 'false');
+                    this.textContent = 'View Other Votes';
+                }
+            };
+        });
+    };
+    
+    // Attach the collapse listener (no changes needed)
+    const attachCollapseListeners = () => {
+        document.querySelectorAll('.collapse-btn').forEach(button => {
+            button.onclick = function() {
+                const dayToToggle = this.getAttribute('data-day');
+                const currentState = this.getAttribute('data-state');
+                
+                const eventWrappers = document.querySelectorAll(`.event-card-wrapper[data-day="${dayToToggle}"]`);
+                
+                if (currentState === 'expanded') {
+                    eventWrappers.forEach(wrapper => {
+                        wrapper.style.display = 'none';
+                    });
+                    this.setAttribute('data-state', 'collapsed');
+                    this.innerHTML = '<i class="fas fa-chevron-down"></i>';
+                } else {
+                    eventWrappers.forEach(wrapper => {
+                        wrapper.style.display = 'block';
+                    });
+                    this.setAttribute('data-state', 'expanded');
+                    this.innerHTML = '<i class="fas fa-chevron-up"></i>';
+                }
             };
         });
     };
 
-    // --- Initialization & Setup ---
-    // 1. Set up the Tab Switching
+    // --- INITIALIZATION & DATA LISTENER ---
+
+    // 1. Set up the Tab Switching (no change)
     tabLinks.forEach(link => {
         link.addEventListener('click', () => {
             const targetTab = link.getAttribute('data-tab');
@@ -222,14 +247,13 @@ document.addEventListener('DOMContentLoaded', () => {
             tabContents.forEach(c => c.classList.remove('active'));
             link.classList.add('active');
             document.getElementById(targetTab).classList.add('active');
-            // Re-render events when Daily Plan tab is activated
             if (targetTab === 'tab-daily') {
                 renderAllEvents();
             }
         });
     });
 
-    // 2. Set up the User Selector
+    // 2. Set up the User Selector (no change)
     USERS.forEach(user => {
         const option = document.createElement('option');
         option.value = user;
@@ -241,100 +265,10 @@ document.addEventListener('DOMContentLoaded', () => {
     userSelect.addEventListener('change', (e) => {
         CURRENT_USER = e.target.value;
         document.getElementById('current-user-display').textContent = `(VOTING AS: ${CURRENT_USER})`;
-        renderAllEvents(); // Re-render to update current user's highlight
+        renderAllEvents();
     });
     
-    // 3. Populate initial (hardcoded) events
-    const initialEvents = [
-        // Hardcoded Event 1 (Dec 14)
-        { 
-            id: 'e001', 
-            day: 'Dec 14 (Sea)', 
-            title: 'Captain\'s Welcome Aboard Show', 
-            time: '7:30 PM - 8:30 PM (1 hr)', 
-            location: 'Theater (Decks 2 & 3)', 
-            votes: { 
-                yes: ["Ciara", "Chris", "Evan"], 
-                no: ["Abe", "Bryce", "Allen", "Koda"] 
-            } 
-        },
-        // Hardcoded Event 2 (Dec 14)
-        { 
-            id: 'e002', 
-            day: 'Dec 14 (Sea)', 
-            title: 'Late-Night DJ Set', 
-            time: '11:00 PM - 1:00 AM (2 hr)', 
-            location: 'The Crypt Nightclub', 
-            votes: { 
-                yes: ["Abe", "Chris", "Koda"], 
-                no: ["Ciara", "Bryce", "Evan", "Allen"] 
-            } 
-        },
-        // Dummy Event (Dec 15)
-        { 
-            id: 'e009', 
-            day: 'Dec 15 (Port 1)', 
-            title: 'Group Dinner Reservation at Chops', 
-            time: '7:00 PM', 
-            location: 'Chops Grille (Deck 11)', 
-            votes: { 
-                yes: ["Abe", "Ciara", "Chris", "Bryce"], 
-                no: ["Evan", "Allen", "Koda"] 
-            } 
-        },
-        // --- Original Events from User Input (e003 - e008) ---
-        { 
-            id: 'e003', 
-            day: 'Dec 14 (Sea)', 
-            title: 'Guess the Weight of the Sculpture', 
-            time: '10:40 AM - 3:10 PM', 
-            location: 'Deck 5', 
-            votes: { yes: [], no: [] } 
-        },
-        { 
-            id: 'e004', 
-            day: 'Dec 14 (Sea)', 
-            title: 'Caribbean Tunes with Tropical Band', 
-            time: '11:15 AM - 12:00 PM', 
-            location: 'Deck 11', 
-            votes: { yes: [], no: [] } 
-        },
-        { 
-            id: 'e005', 
-            day: 'Dec 14 (Sea)', 
-            title: 'Complimentary Facial Demonstration', 
-            time: '12:00 PM - 4:00 PM', 
-            location: 'Deck 12', 
-            votes: { yes: [], no: [] } 
-        },
-        { 
-            id: 'e006', 
-            day: 'Dec 14 (Sea)', 
-            title: 'Complimentary Massage Demonstration', 
-            time: '12:00 PM - 4:30 PM', 
-            location: 'Deck 12', 
-            votes: { yes: [], no: [] } 
-        },
-        { 
-            id: 'e007', 
-            day: 'Dec 14 (Sea)', 
-            title: 'Pain Management with Acupuncture', 
-            time: '12:00 PM - 5:00 PM', 
-            location: 'Deck 4', 
-            votes: { yes: [], no: [] } 
-        },
-        { 
-            id: 'e008', 
-            day: 'Dec 14 (Sea)', 
-            title: 'Port & Shopping Expert Available', 
-            time: '12:00 PM - 2:00 PM', 
-            location: 'Deck 4', 
-            votes: { yes: [], no: [] } 
-        },
-    ];
-    initialEvents.forEach(addEventToData);
-    
-    // 4. Form Handling for New Events
+    // 3. New Event Form Handling (updated to use DB function)
     addEventBtn.addEventListener('click', () => {
         addEventForm.style.display = 'block';
         addEventBtn.style.display = 'none';
@@ -349,34 +283,56 @@ document.addEventListener('DOMContentLoaded', () => {
     addEventForm.addEventListener('submit', (e) => {
         e.preventDefault();
         
-        // Check if user is selected before creating event
         if (!CURRENT_USER) {
             alert("Please select your name from the 'Viewing As' dropdown before submitting an event.");
             return;
         }
 
         const newEvent = {
-            id: getNextEventId(),
             day: document.getElementById('event-day').value,
             title: document.getElementById('event-title').value,
             time: document.getElementById('event-time').value,
             location: document.getElementById('event-location').value,
-            // Automatic YES vote for the user who created it
             votes: {
                 yes: [CURRENT_USER],
                 no: USERS.filter(user => user !== CURRENT_USER)
             }
         };
 
-        addEventToData(newEvent);
+        addNewEventToDB(newEvent);
+        
         addEventForm.style.display = 'none';
         addEventBtn.style.display = 'block';
         addEventForm.reset();
-        renderAllEvents(); // Update the list immediately
+        // Render is now handled by the Firestore listener
     });
 
-    // Initial render of events when the page first loads (if on the daily tab)
-    if (document.getElementById('tab-daily').classList.contains('active')) {
+    // 4. Firestore Real-Time Data Listener
+    // This is the core piece: it listens for changes and updates LIVE_EVENTS array
+    db.collection('events').onSnapshot(snapshot => {
+        LIVE_EVENTS = snapshot.docs.map(doc => ({
+            id: doc.id, // Use Firestore's generated document ID as the event ID
+            ...doc.data()
+        }));
+        
+        // Re-render the events list every time the database changes
         renderAllEvents();
-    }
+    }, error => {
+        console.error("Firestore snapshot error:", error);
+    });
+    
+    // 5. Initial Data Population (Manual one-time push)
+    // IMPORTANT: Run this once manually if your 'events' collection is empty.
+    // If you already have events in the DB, DELETE this section.
+    const initialEvents = [
+        { day: 'Dec 14 (Sea)', title: 'Captain\'s Welcome Aboard Show', time: '7:30 PM - 8:30 PM (1 hr)', location: 'Theater (Decks 2 & 3)', votes: { yes: ["Ciara", "Chris", "Evan"], no: ["Abe", "Bryce", "Allen", "Koda"] } },
+        { day: 'Dec 14 (Sea)', title: 'Late-Night DJ Set', time: '11:00 PM - 1:00 AM (2 hr)', location: 'The Crypt Nightclub', votes: { yes: ["Abe", "Chris", "Koda"], no: ["Ciara", "Bryce", "Evan", "Allen"] } },
+        { day: 'Dec 15 (Port 1)', title: 'Group Dinner Reservation at Chops', time: '7:00 PM', location: 'Chops Grille (Deck 11)', votes: { yes: ["Abe", "Ciara", "Chris", "Bryce"], no: ["Evan", "Allen", "Koda"] } },
+    ];
+    // UNCOMMENT AND RUN THIS CODE ONCE IF YOUR DB IS EMPTY:
+    /*
+    initialEvents.forEach(event => {
+        db.collection('events').add(event);
+    });
+    */
 });
